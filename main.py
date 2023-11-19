@@ -1,4 +1,4 @@
-
+import streamlit as st
 import pandas as pd
 import numpy as np
 import googleapiclient.discovery
@@ -10,14 +10,14 @@ from data_mapping_with_transfer import data_mapping_with_transfer
 
 class youtube_harvest:
     #Constructor
-    def __init__(self, youtube, max_playlist, max_videos, max_comments, isToken_playlists, isToken_videos, mongodb):
+    def __init__(self, youtube, max_playlist, max_videos, max_comments, isToken_playlists, isToken_videos, response_back):
         self.youtube = youtube
         self.max_playlist = max_playlist
         self.max_videos = max_videos
         self.max_comments = max_comments
         self.isToken_playlists = isToken_playlists
         self.isToken_videos = isToken_videos
-        self.mongodb = mongodb
+        self.response_back = response_back
 
     def convert_duration(self, duration_str):
         try:
@@ -83,6 +83,7 @@ class youtube_harvest:
                 #channel[playlist_key]['Videos'] = list(video_details.values())
                 channel[playlist_key] = playlist_data
                 playlist_count+=1
+            self.response_back = channel
             return(channel)
         except Exception as e:
             return(e)
@@ -189,25 +190,45 @@ class youtube_harvest:
         except Exception as e:
             return(e)
 
-    def on_ingest_button_click(self, response):
-        try:
-            check = self.mongodb.db_creation_with_data_ingestion(response)
-            return check
-        except Exception as e:
-            return(e)
+    # def retrieve_response(self):
+    #     try:
+    #         res = self.response_back
+    #         return res
+    #     except Exception as e:
+    #         return(e)
             
 if __name__ == '__main__':
+
+    def callback():
+        st.session_state.button_clicked1 = True
+
+    def callback1():
+        st.session_state.button_clicked2 = True
+
+
     try:
-        print('Welcome to Youtube Harvesting!')
+        if "button_clicked1" not in st.session_state:
+            st.session_state.button_clicked1 = False
+
+        if "button_clicked2" not in st.session_state:
+            st.session_state.button_clicked2 = False
+
+        st.title('Welcome to Youtube Harvesting!')
         channel = {}
         collection_val = None
+        response = None
+        response_back = None
+        check_val = None
         #session_state = {"button_clicked": True}
-        channel_id = input('Channel ID')
-        max_playlist_per_page = int(input('No. of playlist per page'))
-        max_videos_per_page = int(input('No. of videos per page'))
-        max_comments_per_page = int(input('No. of comments per page'))
-        isPageToken_playlist = bool(input('Do you wanna run with page token for playlists?'))
-        isPageToken_videos = bool(input('Do you wanna run with page token for videos?'))
+        channel_id = st.text_input('Channel ID', '', placeholder = 'Enter a channel id')
+        max_playlist_per_page = st.slider('No. of playlist per page', 0, 50, value=5)
+        max_videos_per_page = st.slider('No. of videos per page', 1, 50, value=5)
+        max_comments_per_page = st.slider('No. of comments per page', 1, 100, value=20)
+        isPageToken_playlist = st.checkbox('Do you wanna run with page token for playlists?', False)
+        isPageToken_videos = st.checkbox('Do you wanna run with page token for videos?', False)
+
+        youtube = googleapiclient.discovery.build("youtube", "v3", developerKey="AIzaSyCYwWfQG1T8TXjOPDEhuRAYfmGfHGToWDU")
+        youtube_har = youtube_harvest(youtube, max_playlist_per_page, max_videos_per_page, max_comments_per_page, isPageToken_playlist, isPageToken_videos, response_back)
 
         local_host = "mongodb://localhost:27017/"
         db_name = "youtube_harvest"
@@ -218,40 +239,52 @@ if __name__ == '__main__':
         sql_conn = data_mapping_with_transfer(sql)
         connect = sql_conn.connect_db()
 
-        search = bool(input("Search"))
-        if(search):
+        
+        if(st.button("Search", on_click=callback) or st.session_state.button_clicked1):
+            #search_clicked = True
+            #st.session_state['search_clicked'] = search_clicked
+            st.write("Search button clicked!")
             if channel_id != '' or channel_id is not None:
-                youtube = googleapiclient.discovery.build("youtube", "v3", developerKey="AIzaSyAvkOmXlfnRaPrF5O7-gOtvbfnLO7XNLo8")
-                youtube_har = youtube_harvest(youtube, max_playlist_per_page, max_videos_per_page, max_comments_per_page, isPageToken_playlist, isPageToken_videos, mongodb)
                 response = youtube_har.channel_api_call(channel_id, channel)
-                print(response)
-                #st.json(response, expanded=False)
                 if response:
-                    ingest = bool(input("Do you wanna ingest data to MongoDB?"))
-                    #if st.button('Ingest Data'):
-                    if ingest:
-                        check_val = youtube_har.on_ingest_button_click(response)
-                        print(check_val)
-                        if check_val["status"] == 'Success':
-                            print("Data ingestion successful!")
-                            migrate = bool(input("Do you wanna migrate data to SQL?"))
-                            if(migrate):
-                                create_table_ddl = sql_conn.execute_ddl(connect['cursor'], connect['conn'])
-                                if(create_table_ddl):
-                                    retrieve_values = mongodb.retrieve_data_after_ingestion(check_val["Collection"])
-                                    for val in retrieve_values:
-                                        map = sql_conn.insert_data(connect['cursor'], connect['conn'], val)
-                                        print(map)
-                                else:
-                                    print("Tables not created")
+                    st.json(response, expanded=False)
+                    if(st.button('Ingest Data', on_click=callback1)):
+                        st.write("Ingest button clicked!")
+                        if response:
+                            check_val = mongodb.db_creation_with_data_ingestion(response)
+                            if check_val["status"] == 'Success':
+                                st.success("Data ingestion successful!")
+                                if(st.button("Transfer", on_click=callback1) or st.session_state.button_clicked2):
+                                    st.write("Transfer button clicked!")
+                                    create_table_ddl = sql_conn.execute_ddl(connect['cursor'], connect['conn'])
+                                    if(create_table_ddl):
+                                        retrieve_values = mongodb.retrieve_data_after_ingestion(check_val["Collection"])
+                                        for val in retrieve_values:
+                                            connect = sql_conn.connect_db()
+                                            map = sql_conn.insert_data(connect['cursor'], connect['conn'], val)
+                                            st.success(map)
+                                    else:
+                                        st.warning("Tables not created")
                             else:
-                                print("No transfer")
-                    else:
-                        print("Data ingestion failed!")
+                                st.warning("Data ingestion failed!")
                 else:
-                    print("No data found.")       
+                    st.warning("No response from API")
             else:
-                print("Please enter a channel ID.")
+                st.warning("Please enter a channel ID.")
+        
+        #ingest = bool(input("Do you wanna ingest data to MongoDB?"))
+
+        #if search_clicked:
+        
+
+        #migrate = bool(input("Do you wanna migrate data to SQL?"))
+
+        #if ingest_clicked:
+        #transfer = st.button("Transfer")
+        
+                    
+                       
+            
         
     except Exception as e:
         print(e)
