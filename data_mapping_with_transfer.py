@@ -21,11 +21,11 @@ class data_mapping_with_transfer:
             cursor_db=db_conn.cursor()
             return({"cursor": cursor_db, "conn": db_conn})
         except Exception as e:
-            return e
+            return (f"Error connecting to MySQL database: {e}")
 
     def execute_ddl(self, cursor_db, db_conn):
         try:
-            channel_sql ='''CREATE TABLE IF NOT EXISTS Channel (channel_id varchar(255) NOT NULL, channel_name varchar(255), channel_type varchar(255), channel_views int, channel_description text , channel_status varchar(255), constraint pk Primary Key (channel_id));'''
+            channel_sql ='''CREATE TABLE IF NOT EXISTS Channel (channel_id varchar(255) NOT NULL, channel_name varchar(255), channel_type varchar(255), channel_views bigint, channel_description text , channel_status varchar(255), constraint pk Primary Key (channel_id));'''
             cursor_db.execute(channel_sql)
             playlist_sql = '''CREATE TABLE IF NOT EXISTS Playlist (playlist_id varchar(255) NOT NULL, channel_id varchar(255), playlist_name varchar(255),  constraint pk Primary Key (playlist_id), constraint fk_channel Foreign Key (channel_id) REFERENCES Channel(channel_id));'''
             cursor_db.execute(playlist_sql)
@@ -43,7 +43,7 @@ class data_mapping_with_transfer:
             return("Tables created")
         except Exception as e:
             db_conn.rollback()
-            return e
+            return("Error in execute_ddl "+str(e))
 
     def close_connection(self, cursor_db, db_conn):
         db_conn.commit()
@@ -57,72 +57,98 @@ class data_mapping_with_transfer:
     #     return(existing)
 
     def insert_channel(self, cursor_db, db_conn, channel_data):
-        insert_channel_query = '''INSERT INTO Channel (channel_id, channel_name, channel_type, channel_views, channel_description, channel_status) VALUES (%s, %s, %s, %s, %s, %s);'''
-        channel_type = ', '.join(channel_data['Channel_Type']) if channel_data['Channel_Type'] else None
-        values = (
-                channel_data['Channel_Id'],
-                channel_data['Channel_Name'],
-                channel_type,
-                channel_data['Channel_Views'],
-                channel_data['Channel_Description'],
-                channel_data['Channel_Status']
-            )
-        cursor_db.execute(insert_channel_query, values)
-        db_conn.commit()
-        return("Channel added")
+        try:
+            insert_channel_query = '''INSERT INTO Channel (channel_id, channel_name, channel_type, channel_views, channel_description, channel_status) VALUES (%s, %s, %s, %s, %s, %s);'''
+            channel_type = ', '.join(channel_data['Channel_Type']) if channel_data['Channel_Type'] else None
+            print(channel_type)
+            channel_desp = channel_data['Channel_Description'].replace("'", "''").replace('\n', ' ')
+            print(channel_desp)
+            #channel_view_count = channel_data['Channel_Views']['$numberLong'] if '$numberLong' in channel_data['Channel_Views'] else channel_data['Channel_Views']
+            #print(channel_view_count)
+            values = (
+                    channel_data['Channel_Id'],
+                    channel_data['Channel_Name'].encode('ascii', 'ignore').decode('ascii'),
+                    channel_type.encode('ascii', 'ignore').decode('ascii'),
+                    channel_data['Channel_Views'],
+                    channel_desp.encode('ascii', 'ignore').decode('ascii'),
+                    channel_data['Channel_Status']
+                )
+            print(insert_channel_query % values)
+            cursor_db.execute(insert_channel_query, values)
+            db_conn.commit()
+            #self.close_connection(cursor_db, db_conn)
+            return("Channel added")
+        except Exception as e:
+            db_conn.rollback()
+            return(f"Error in insert_channel: {str(e)}")
         
 
     def insert_playlist(self, cursor_db, db_conn, playlist_data, channel_id):
-        # Insert playlist data into MySQL Playlist table
-        insert_playlist_query = '''INSERT IGNORE INTO Playlist (playlist_id,channel_id,playlist_name) VALUES (%s, %s, %s);'''
-        values = (
-            playlist_data['Playlist_Id'],
-            channel_id,
-            playlist_data['Playlist_Name'].encode('ascii', 'ignore').decode('ascii') if playlist_data['Playlist_Name'] else None
-        )
-        cursor_db.execute(insert_playlist_query, values)
-        db_conn.commit()
-        return("Playlist added")
+        try:
+            # Insert playlist data into MySQL Playlist table
+            insert_playlist_query = '''INSERT IGNORE INTO Playlist (playlist_id,channel_id,playlist_name) VALUES (%s, %s, %s);'''
+            values = (
+                playlist_data['Playlist_Id'],
+                channel_id,
+                playlist_data['Playlist_Name'].encode('ascii', 'ignore').decode('ascii') if playlist_data['Playlist_Name'] else None
+            )
+            cursor_db.execute(insert_playlist_query, values)
+            db_conn.commit()
+            #self.close_connection(cursor_db, db_conn)
+            return("Playlist added")
+        except Exception as e:
+            db_conn.rollback()
+            return(f"Error in insert_playlist : {str(e)}")
 
     def insert_video(self, cursor_db, db_conn, video_data, playlist_id):
-        # Insert video data into MySQL Video table
-        insert_video_query = '''INSERT IGNORE INTO Video (video_id, playlist_id, video_name, video_description, published_date, tags, view_count, like_count, dislike_count, favorite_count, comment_count, duration, thumbnail, caption_status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'''
-        video_id = video_data['Video_Id']
-        video_duration = self.duration_to_seconds(video_data['Duration'])
-        tags = ', '.join(video_data['Tags']) if video_data['Tags'] else None
-        values = (
-            video_id,
-            playlist_id,
-            video_data['Video_Name'].encode('ascii', 'ignore').decode('ascii') if video_data['Video_Name'] else None,
-            video_data['Video_Description'].encode('ascii', 'ignore').decode('ascii') if video_data['Video_Description'] else None,
-            video_data['PublishedAt'],
-            tags,
-            video_data['View_Count'],
-            video_data['Like_Count'],
-            video_data['Dislike_Count'],
-            video_data['Favorite_Count'],
-            video_data['Comment_Count'],
-            video_duration,
-            video_data['Thumbnail'],
-            video_data['Caption_Status']
-        )
-        cursor_db.execute(insert_video_query, values)
-        db_conn.commit()
-        return("Videos added")
+        try:
+            # Insert video data into MySQL Video table
+            insert_video_query = '''INSERT IGNORE INTO Video (video_id, playlist_id, video_name, video_description, published_date, tags, view_count, like_count, dislike_count, favorite_count, comment_count, duration, thumbnail, caption_status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'''
+            video_id = video_data['Video_Id']
+            video_duration = self.duration_to_seconds(video_data['Duration'])
+            tags = ', '.join(video_data['Tags']) if video_data['Tags'] else None
+            values = (
+                video_id,
+                playlist_id,
+                video_data['Video_Name'].encode('ascii', 'ignore').decode('ascii') if video_data['Video_Name'] else None,
+                video_data['Video_Description'].encode('ascii', 'ignore').decode('ascii') if video_data['Video_Description'] else None,
+                video_data['PublishedAt'],
+                tags,
+                video_data['View_Count'],
+                video_data['Like_Count'],
+                video_data['Dislike_Count'],
+                video_data['Favorite_Count'],
+                video_data['Comment_Count'],
+                video_duration,
+                video_data['Thumbnail'],
+                video_data['Caption_Status']
+            )
+            cursor_db.execute(insert_video_query, values)
+            db_conn.commit()
+            #self.close_connection(cursor_db, db_conn)
+            return("Videos added")
+        except Exception as e:
+            db_conn.rollback()
+            return(f"Error in insert_video: {str(e)}")
 
     def insert_comment(self, cursor_db, db_conn, comment_data, video_id):
-        # Insert comment data into MySQL Comment table
-        insert_comment_query = '''INSERT IGNORE INTO Comment (comment_id,video_id,comment_text,comment_author,comment_published_date) VALUES (%s, %s, %s, %s, %s);'''
-        values = (
-            comment_data['Comment_Id'],
-            video_id,
-            comment_data['Comment_Text'].encode('ascii', 'ignore').decode('ascii') if comment_data['Comment_Text'] else None,
-            comment_data['Comment_Author'].encode('ascii', 'ignore').decode('ascii') if comment_data['Comment_Author'] else None,
-            comment_data['Comment_PublishedAt']
-        )
-        cursor_db.execute(insert_comment_query, values)
-        db_conn.commit()
-        return("Comments added")
+        try:
+            # Insert comment data into MySQL Comment table
+            insert_comment_query = '''INSERT IGNORE INTO Comment (comment_id,video_id,comment_text,comment_author,comment_published_date) VALUES (%s, %s, %s, %s, %s);'''
+            values = (
+                comment_data['Comment_Id'],
+                video_id,
+                comment_data['Comment_Text'].encode('ascii', 'ignore').decode('ascii') if comment_data['Comment_Text'] else None,
+                comment_data['Comment_Author'].encode('ascii', 'ignore').decode('ascii') if comment_data['Comment_Author'] else None,
+                comment_data['Comment_PublishedAt']
+            )
+            cursor_db.execute(insert_comment_query, values)
+            db_conn.commit()
+            #self.close_connection(cursor_db, db_conn)
+            return("Comments added")
+        except Exception as e:
+            db_conn.rollback()
+            return(f"Error in insert_comment: {str(e)}")
 
     def insert_data(self, cursor_db, db_conn, value_from_doc):
         try:
@@ -145,8 +171,100 @@ class data_mapping_with_transfer:
                                                     if comment_key.startswith('Comment_Id'):
                                                         comment_data = comment_value
                                                         insert_comm = self.insert_comment(cursor_db, db_conn, comment_data, video_data['Video_Id'])
-            self.close_connection(cursor_db, db_conn)
-            return("Transaction was successful!")
+            #self.close_connection(cursor_db, db_conn)
+                return("Transaction was successful!")
+            else:
+                return("Transaction failed")
         except Exception as e:
             db_conn.rollback()
-            return(f"Error: {e}")
+            return(f"Error in insert_data : {str(e)}")
+
+    def getAllVideosAndChannels(self, cursor_db, db_conn):
+        try:
+            query = "SELECT video_name, channel_name FROM Video vid LEFT JOIN Playlist play ON play.playlist_id =  vid.playlist_id LEFT JOIN Channel ch ON ch.channel_id = play.channel_id;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in getAllVideosAndChannels: {str(e)}")
+
+    def channelNameMostVideo(self, cursor_db, db_conn):
+        try:
+            query = "SELECT channel_name, COUNT(video_id) as video_count from Video vid LEFT JOIN Playlist play ON play.playlist_id = vid.playlist_id LEFT JOIN Channel ch ON ch.channel_id = play.channel_id GROUP BY play.channel_id ORDER BY video_count DESC;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in channelNameMostVideo: {str(e)}")
+
+    def topTenViewedVideosWithChannels(self, cursor_db, db_conn):
+        try:
+            query = "SELECT channel_name, video_name from Video vid LEFT JOIN Playlist play ON play.playlist_id = vid.playlist_id LEFT JOIN Channel ch ON ch.channel_id = play.channel_id ORDER BY view_count DESC LIMIT 10;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in topTenViewedVideosWithChannels: {str(e)}")
+
+    def commentCountForEachVideos(self, cursor_db, db_conn):
+        try:
+            query = "SELECT video_name, comment_count FROM Video;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in commentCountForEachVideos: {str(e)}")
+
+    def highestLikesChannels(self, cursor_db, db_conn):
+        try:
+            query = "SELECT channel_name, video_name, like_count from Video vid LEFT JOIN Playlist play ON play.playlist_id = vid.playlist_id LEFT JOIN Channel ch ON ch.channel_id = play.channel_id ORDER BY like_count DESC;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in highestLikesChannels: {str(e)}")
+
+    def totalLikesOrDislikesOfEachVideo(self, cursor_db, db_conn):
+        try:
+            query = "SELECT video_name, like_count, dislike_count FROM Video ORDER BY like_count DESC;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in totalLikesOrDislikesOfEachVideo: {str(e)}")
+
+    def totalViewsAndChannelName(self, cursor_db, db_conn):
+        try:
+            query = "SELECT channel_name, channel_views FROM Channel ORDER BY channel_views DESC;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in totalViewsAndChannelName: {str(e)}")
+
+    def publishedVideosChannels(self, cursor_db, db_conn):
+        try:
+            query = "SELECT channel_name FROM Channel ch LEFT JOIN Playlist play ON play.channel_id = ch.channel_id LEFT JOIN Video vid ON vid.playlist_id = play.playlist_id WHERE year(vid.published_date)=2022 GROUP BY ch.channel_id;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in publishedVideosChannels: {str(e)}")
+
+    def avgDurationOfAllVideos(self, cursor_db, db_conn):
+        try:
+            query = "SELECT channel_name, avg(vid.duration) AS average_video_duration FROM Channel ch LEFT JOIN Playlist play ON play.channel_id = ch.channel_id LEFT JOIN Video vid ON vid.playlist_id = play.playlist_id GROUP BY ch.channel_id ORDER BY average_video_duration DESC;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in avgDurationOfAllVideos: {str(e)}")
+
+    def highestCommentAndChannels(self, cursor_db, db_conn):
+        try:
+            query = "SELECT channel_name, SUM(vid.comment_count) AS comment_count FROM Channel ch LEFT JOIN Playlist play ON play.channel_id = ch.channel_id LEFT JOIN Video vid ON vid.playlist_id = play.playlist_id GROUP BY ch.channel_id ORDER BY comment_count DESC;"
+            cursor_db.execute(query)
+            result = cursor_db.fetchall()
+            return result
+        except:
+            return(f"Error in highestCommentAndChannels: {str(e)}")
