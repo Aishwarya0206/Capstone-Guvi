@@ -10,4 +10,8 @@ Once the resultant is populated, pass it to the mongodb to store it as the docum
 
 Transfer:
 After which, retrieve all the documents from mongodb and pass it to store in MySQL.
+
+
+Data frames table:
+Queried and extracted the required columns as per the provided statement.
 </pre>
