@@ -20,6 +20,7 @@ class data_ingestion:
         try:
             cursor = collection.find({})
             return cursor
+            # for value in cursor:
+            #     yield value
         except Exception as e:
             return(e)
-    
