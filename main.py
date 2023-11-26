@@ -85,7 +85,7 @@ if __name__ == '__main__':
         isPageToken_videos = my_form.checkbox('Do you wanna extract all the videos?', False)
         transfer_data = my_form.toggle('Do you wanna transfer the data?')
 
-        youtube = googleapiclient.discovery.build("youtube", "v3", developerKey="AIzaSyDNkiWXgrXKGfZLUP3xnaattLDWAJBdAhk")
+        youtube = googleapiclient.discovery.build("youtube", "v3", developerKey="AIzaSyCsiRNuW5bLvefYWE2l5Z8xHIHUHGUyNCk")
         youtube_har = youtube_harvest(youtube, max_playlist_per_page, max_videos_per_page, max_comments_per_page, isPageToken_playlist, isPageToken_videos, response_back)
 
         local_host = "mongodb://localhost:27017/"
