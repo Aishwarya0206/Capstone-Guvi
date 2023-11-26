@@ -21,7 +21,7 @@ class data_mapping_with_transfer:
             cursor_db=db_conn.cursor()
             return({"cursor": cursor_db, "conn": db_conn})
         except Exception as e:
-            return (f"Error connecting to MySQL database: {e}")
+            return ("Error connecting to MySQL database: "+str(e))
 
     def execute_ddl(self, cursor_db, db_conn):
         try:
@@ -80,7 +80,7 @@ class data_mapping_with_transfer:
             return("Channel added")
         except Exception as e:
             db_conn.rollback()
-            return(f"Error in insert_channel: {str(e)}")
+            return("Error in insert_channel: "+str(e))
         
 
     def insert_playlist(self, cursor_db, db_conn, playlist_data, channel_id):
@@ -98,7 +98,7 @@ class data_mapping_with_transfer:
             return("Playlist added")
         except Exception as e:
             db_conn.rollback()
-            return(f"Error in insert_playlist : {str(e)}")
+            return("Error in insert_playlist : "+str(e))
 
     def insert_video(self, cursor_db, db_conn, video_data, playlist_id):
         try:
@@ -129,7 +129,7 @@ class data_mapping_with_transfer:
             return("Videos added")
         except Exception as e:
             db_conn.rollback()
-            return(f"Error in insert_video: {str(e)}")
+            return("Error in insert_video: "+str(e))
 
     def insert_comment(self, cursor_db, db_conn, comment_data, video_id):
         try:
@@ -148,7 +148,7 @@ class data_mapping_with_transfer:
             return("Comments added")
         except Exception as e:
             db_conn.rollback()
-            return(f"Error in insert_comment: {str(e)}")
+            return("Error in insert_comment: "+str(e))
 
     def insert_data(self, cursor_db, db_conn, value_from_doc):
         try:
@@ -177,7 +177,7 @@ class data_mapping_with_transfer:
                 return("Transaction failed")
         except Exception as e:
             db_conn.rollback()
-            return(f"Error in insert_data : {str(e)}")
+            return("Error in insert_data : "+str(e))
 
     def getAllVideosAndChannels(self, cursor_db, db_conn):
         try:
@@ -186,7 +186,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in getAllVideosAndChannels: {str(e)}")
+            return("Error in getAllVideosAndChannels: "+str(e))
 
     def channelNameMostVideo(self, cursor_db, db_conn):
         try:
@@ -195,7 +195,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in channelNameMostVideo: {str(e)}")
+            return("Error in channelNameMostVideo: "+str(e))
 
     def topTenViewedVideosWithChannels(self, cursor_db, db_conn):
         try:
@@ -204,7 +204,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in topTenViewedVideosWithChannels: {str(e)}")
+            return("Error in topTenViewedVideosWithChannels: "+str(e))
 
     def commentCountForEachVideos(self, cursor_db, db_conn):
         try:
@@ -213,7 +213,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in commentCountForEachVideos: {str(e)}")
+            return("Error in commentCountForEachVideos: "+str(e))
 
     def highestLikesChannels(self, cursor_db, db_conn):
         try:
@@ -222,7 +222,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in highestLikesChannels: {str(e)}")
+            return("Error in highestLikesChannels: "+str(e))
 
     def totalLikesOrDislikesOfEachVideo(self, cursor_db, db_conn):
         try:
@@ -231,7 +231,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in totalLikesOrDislikesOfEachVideo: {str(e)}")
+            return("Error in totalLikesOrDislikesOfEachVideo: "+str(e))
 
     def totalViewsAndChannelName(self, cursor_db, db_conn):
         try:
@@ -240,7 +240,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in totalViewsAndChannelName: {str(e)}")
+            return("Error in totalViewsAndChannelName: "+str(e))
 
     def publishedVideosChannels(self, cursor_db, db_conn):
         try:
@@ -249,7 +249,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in publishedVideosChannels: {str(e)}")
+            return("Error in publishedVideosChannels: "+str(e))
 
     def avgDurationOfAllVideos(self, cursor_db, db_conn):
         try:
@@ -258,7 +258,7 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in avgDurationOfAllVideos: {str(e)}")
+            return("Error in avgDurationOfAllVideos: "+str(e))
 
     def highestCommentAndChannels(self, cursor_db, db_conn):
         try:
@@ -267,4 +267,4 @@ class data_mapping_with_transfer:
             result = cursor_db.fetchall()
             return result
         except:
-            return(f"Error in highestCommentAndChannels: {str(e)}")
+            return("Error in highestCommentAndChannels: "+str(e))
